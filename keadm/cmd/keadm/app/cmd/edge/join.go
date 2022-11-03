@@ -178,7 +178,7 @@ func join(opt *common.JoinOptions, step *common.Step) error {
 	}
 
 	step.Printf("Generate systemd service file")
-	if err := common.GenerateServiceFile(util.KubeEdgeBinaryName, filepath.Join(util.KubeEdgeUsrBinPath, util.KubeEdgeBinaryName)); err != nil {
+	if err := util.GenerateServiceFile(util.KubeEdgeBinaryName, filepath.Join(util.KubeEdgeUsrBinPath, util.KubeEdgeBinaryName)); err != nil {
 		return fmt.Errorf("create systemd service file failed: %v", err)
 	}
 
@@ -290,25 +290,38 @@ func createEdgeConfigFiles(opt *common.JoinOptions) error {
 	}
 	return common.Write2File(configFilePath, edgeCoreConfig)
 }
-
-func runEdgeCore() error {
-	systemdExist := util.HasSystemd()
-
+func findBestBinExeCmd() (string, string) {
 	var binExec, tip string
+
+	systemdExist := util.HasSystemd()
 	if systemdExist {
 		tip = fmt.Sprintf("KubeEdge edgecore is running, For logs visit: journalctl -u %s.service -xe", common.EdgeCore)
 		binExec = fmt.Sprintf(
 			"sudo systemctl daemon-reload && sudo systemctl enable %s && sudo systemctl start %s",
 			common.EdgeCore, common.EdgeCore)
-	} else {
-		tip = fmt.Sprintf("KubeEdge edgecore is running, For logs visit: %s%s.log", util.KubeEdgeLogPath, util.KubeEdgeBinaryName)
-		binExec = fmt.Sprintf(
-			"%s > %skubeedge/edge/%s.log 2>&1 &",
-			filepath.Join(util.KubeEdgeUsrBinPath, util.KubeEdgeBinaryName),
-			util.KubeEdgePath,
-			util.KubeEdgeBinaryName,
-		)
+		return binExec, tip
 	}
+
+	alpineOs:=util.IsAlpine()
+	if alpineOs{
+		tip = fmt.Sprintf("KubeEdge edgecore is running, For logs visit: journalctl -u %s.service -xe", common.EdgeCore)
+		binExec = fmt.Sprintf(
+			"sudo rc-update add %s boot && sudo service %s start",
+			common.EdgeCore, common.EdgeCore)
+		return binExec, tip
+	}
+
+	tip = fmt.Sprintf("KubeEdge edgecore is running, For logs visit: %s%s.log", util.KubeEdgeLogPath, util.KubeEdgeBinaryName)
+	binExec = fmt.Sprintf(
+		"%s > %skubeedge/edge/%s.log 2>&1 &",
+		filepath.Join(util.KubeEdgeUsrBinPath, util.KubeEdgeBinaryName),
+		util.KubeEdgePath,
+		util.KubeEdgeBinaryName,
+	)
+	return binExec, tip
+}
+func runEdgeCore() error {
+	binExec, tip := findBestBinExeCmd()
 
 	cmd := util.NewCommand(binExec)
 	if err := cmd.Exec(); err != nil {

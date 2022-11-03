@@ -58,7 +58,7 @@ const (
 	KubeEdgePath         = "/etc/kubeedge/"
 	KubeEdgeBackupPath   = "/etc/kubeedge/backup/"
 	KubeEdgeUpgradePath  = "/etc/kubeedge/upgrade/"
-	KubeEdgeUsrBinPath   = "/usr/local/bin"
+	KubeEdgeUsrBinPath   = "/usr/bin"
 	KubeEdgeBinaryName   = "edgecore"
 	KeadmBinaryName      = "keadm"
 
@@ -552,11 +552,6 @@ func isEdgeCoreServiceRunning(serviceName string) (bool, error) {
 // HasSystemd checks if systemd exist.
 // if command run failed, then check it by sd_booted.
 func HasSystemd() bool {
-	cmd := "file /sbin/init"
-
-	if err := NewCommand(cmd).Exec(); err == nil {
-		return true
-	}
 	// checks whether `SystemdBootPath` exists and is a directory
 	// reference http://www.freedesktop.org/software/systemd/man/sd_booted.html
 	fi, err := os.Lstat(SystemdBootPath)
@@ -564,6 +559,13 @@ func HasSystemd() bool {
 		return false
 	}
 	return fi.IsDir()
+}
+
+func IsAlpine() bool {
+	cmd := "rc-update -h"
+
+	err := NewCommand(cmd).Exec();
+	return err == nil
 }
 
 // computeSHA512Checksum returns the SHA512 checksum of the given file

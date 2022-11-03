@@ -245,7 +245,7 @@ func (up *Upgrade) Process() error {
 
 	// generate edgecore.service
 	if util.HasSystemd() {
-		err = common.GenerateServiceFile(util.KubeEdgeBinaryName, fmt.Sprintf("%s --config %s", filepath.Join(util.KubeEdgeUsrBinPath, util.KubeEdgeBinaryName), up.ConfigFilePath))
+		err = util.GenerateServiceFile(util.KubeEdgeBinaryName, fmt.Sprintf("%s --config %s", filepath.Join(util.KubeEdgeUsrBinPath, util.KubeEdgeBinaryName), up.ConfigFilePath))
 		if err != nil {
 			return fmt.Errorf("failed to create edgecore.service file: %v", err)
 		}
@@ -287,7 +287,7 @@ func (up *Upgrade) Rollback() error {
 
 	// generate edgecore.service
 	if util.HasSystemd() {
-		err = common.GenerateServiceFile(util.KubeEdgeBinaryName, fmt.Sprintf("%s --config %s", filepath.Join(util.KubeEdgeUsrBinPath, util.KubeEdgeBinaryName), up.ConfigFilePath))
+		err = util.GenerateServiceFile(util.KubeEdgeBinaryName, fmt.Sprintf("%s --config %s", filepath.Join(util.KubeEdgeUsrBinPath, util.KubeEdgeBinaryName), up.ConfigFilePath))
 		if err != nil {
 			return fmt.Errorf("failed to create edgecore.service file: %v", err)
 		}
