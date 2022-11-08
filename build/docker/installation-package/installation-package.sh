@@ -6,7 +6,8 @@ REPOSITORY=${REPOSITORY:-"kubeedge/installation-package"}
 RELEASE_VERSION=$(git describe --tags)
 pushTag="$1"
 WORK_DIR=$(cd "$(dirname "$0")";pwd)
-ARCHS=(amd64 arm64 arm)
+ARCHS=(amd64)
+#ARCHS=(amd64 arm64 arm)
 
 if ! [ "$(docker version)" ]; then
   echo "docker check failed"
