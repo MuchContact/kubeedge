@@ -298,6 +298,8 @@ type EdgeHub struct {
 	WebSocket *EdgeHubWebSocket `json:"websocket,omitempty"`
 	// Token indicates the priority of joining the cluster for the edge
 	Token string `json:"token"`
+	User string `json:"user"`
+	Group string `json:"group"`
 	// HTTPServer indicates the server for edge to apply for the certificate.
 	HTTPServer string `json:"httpServer,omitempty"`
 	// RotateCertificates indicates whether edge certificate can be rotated

@@ -93,6 +93,8 @@ type ResetOptions struct {
 
 type GettokenOptions struct {
 	Kubeconfig string
+	User       string
+	Group      string
 }
 
 type DiagnoseOptions struct {

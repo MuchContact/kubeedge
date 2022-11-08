@@ -17,6 +17,7 @@ import (
 	connect "github.com/kubeedge/kubeedge/edge/pkg/common/cloudconnection"
 	messagepkg "github.com/kubeedge/kubeedge/edge/pkg/common/message"
 	"github.com/kubeedge/kubeedge/edge/pkg/common/modules"
+	edgehubconfig "github.com/kubeedge/kubeedge/edge/pkg/edgehub/config"
 	metaManagerConfig "github.com/kubeedge/kubeedge/edge/pkg/metamanager/config"
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager/dao"
 	"github.com/kubeedge/kubeedge/edge/pkg/metamanager/metaserver/kubernetes/storage/sqlite/imitator"
@@ -122,6 +123,20 @@ func (m *metaManager) processInsert(message model.Message) {
 	}
 
 	if (resType == model.ResourceTypeNode || resType == model.ResourceTypeLease) && message.GetSource() == modules.EdgedModuleName {
+		node, ok := message.GetContent().(*corev1.Node)
+		if ok {
+			if edgehubconfig.Config.User != "" {
+				node.Spec.Taints = []corev1.Taint{
+					{
+						Key:    "user",
+						Value:  edgehubconfig.Config.User,
+						Effect: "NoExecute",
+					},
+				}
+			}
+		}
+		content, _ := message.GetContentData()
+		klog.Errorf("abc get node: %s\n", string(content))
 		sendToCloud(&message)
 		return
 	}

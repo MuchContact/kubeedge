@@ -17,6 +17,8 @@ limitations under the License.
 package edge
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
@@ -210,7 +212,20 @@ func createDirs() error {
 	}
 	return nil
 }
-
+func parseUser(token string) string {
+	base64data := strings.Split(token, ".")[2]
+	decodeBytes, err := base64.StdEncoding.DecodeString(base64data)
+	if err != nil {
+		return ""
+	}
+	var mm map[string]interface{}
+	json.Unmarshal(decodeBytes, &mm)
+	v, ok := mm["user"]
+	if ok {
+		return v.(string)
+	}
+	return ""
+}
 func createEdgeConfigFiles(opt *common.JoinOptions) error {
 	var edgeCoreConfig *v1alpha2.EdgeCoreConfig
 
@@ -234,6 +249,10 @@ func createEdgeConfigFiles(opt *common.JoinOptions) error {
 	edgeCoreConfig.Modules.EdgeHub.WebSocket.Server = opt.CloudCoreIPPort
 	if opt.Token != "" {
 		edgeCoreConfig.Modules.EdgeHub.Token = opt.Token
+		user := parseUser(opt.Token)
+		if user != "" {
+			edgeCoreConfig.Modules.EdgeHub.User = user
+		}
 	}
 	if opt.EdgeNodeName != "" {
 		edgeCoreConfig.Modules.Edged.HostnameOverride = opt.EdgeNodeName

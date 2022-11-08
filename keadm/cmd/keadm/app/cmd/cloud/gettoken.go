@@ -3,10 +3,12 @@ package cloud
 import (
 	"context"
 	"fmt"
-
+	hubconfig "github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/config"
 	"github.com/spf13/cobra"
 	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"time"
 
+	"github.com/golang-jwt/jwt"
 	"github.com/kubeedge/kubeedge/common/constants"
 	"github.com/kubeedge/kubeedge/keadm/cmd/keadm/app/cmd/common"
 	"github.com/kubeedge/kubeedge/keadm/cmd/keadm/app/cmd/util"
@@ -40,6 +42,7 @@ func NewGettoken() *cobra.Command {
 				fmt.Printf("failed to get token, err is %s\n", err)
 				return err
 			}
+			token = wrapToken(token, init)
 			return showToken(token)
 		},
 	}
@@ -50,8 +53,36 @@ func NewGettoken() *cobra.Command {
 func addGettokenFlags(cmd *cobra.Command, gettokenOptions *common.GettokenOptions) {
 	cmd.Flags().StringVar(&gettokenOptions.Kubeconfig, common.KubeConfig, gettokenOptions.Kubeconfig,
 		"Use this key to set kube-config path, eg: $HOME/.kube/config")
+	cmd.Flags().StringVar(&gettokenOptions.User, "user", "", "user info")
+	cmd.Flags().StringVar(&gettokenOptions.Group, "group", "", "group info")
 }
 
+func wrapToken(token []byte, options *common.GettokenOptions) []byte {
+	if options.User != "" || options.Group != "" {
+		return generateToken(options.User, options.Group)
+	} else{
+		return token
+	}
+}
+func generateToken(user string, group string)[]byte{
+	expiresAt := time.Now().Add(time.Hour * hubconfig.Config.CloudHub.TokenRefreshDuration * 2).Unix()
+
+	token := jwt.New(jwt.SigningMethodHS256)
+
+	token.Claims = jwt.MapClaims{
+		"exp": expiresAt,
+		"user": user,
+		"group": group,
+	}
+
+	keyPEM := hubconfig.Config.CaKey
+	tokenString, err := token.SignedString(keyPEM)
+	fmt.Printf("ca key: \nToken: %s\n", keyPEM,tokenString)
+	if err !=nil{
+		fmt.Printf("generate token err: %v\n", err)
+	}
+	return []byte(tokenString)
+}
 // newGettokenOptions return common options
 func newGettokenOptions() *common.GettokenOptions {
 	opts := &common.GettokenOptions{}
