@@ -36,6 +36,7 @@ const (
 	EdgeFunctionModel    = "edgefunction"
 	CloudFunctionModel   = "funcmgr"
 	CloudControllerModel = "edgecontroller"
+	MEC_USER_GROUP       = "mec.user.group"
 )
 
 func feedbackError(err error, info string, request model.Message) {
@@ -126,10 +127,12 @@ func (m *metaManager) processInsert(message model.Message) {
 		node, ok := message.GetContent().(*corev1.Node)
 		if ok {
 			if edgehubconfig.Config.User != "" {
+				node.ObjectMeta.Labels=make(map[string]string)
+				node.ObjectMeta.Labels[MEC_USER_GROUP]=edgehubconfig.Config.Group
 				node.Spec.Taints = []corev1.Taint{
 					{
-						Key:    "user",
-						Value:  edgehubconfig.Config.User,
+						Key:    MEC_USER_GROUP,
+						Value:  edgehubconfig.Config.Group,
 						Effect: "NoExecute",
 					},
 				}
