@@ -2,8 +2,8 @@
 
 set -e
 
-REPOSITORY=${REPOSITORY:-"kubeedge/installation-package"}
-RELEASE_VERSION=$(git describe --tags)
+REPOSITORY=${REPOSITORY:-"registry.cn-hangzhou.aliyuncs.com/mec_v1/installation-package"}
+RELEASE_VERSION=${VERSION:-"latest"}
 pushTag="$1"
 WORK_DIR=$(cd "$(dirname "$0")";pwd)
 ARCHS=(amd64)
