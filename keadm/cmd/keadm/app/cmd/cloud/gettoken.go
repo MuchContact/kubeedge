@@ -3,15 +3,14 @@ package cloud
 import (
 	"context"
 	"fmt"
-	hubconfig "github.com/kubeedge/kubeedge/cloud/pkg/cloudhub/config"
-	"github.com/spf13/cobra"
-	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"time"
-
 	"github.com/golang-jwt/jwt"
 	"github.com/kubeedge/kubeedge/common/constants"
 	"github.com/kubeedge/kubeedge/keadm/cmd/keadm/app/cmd/common"
 	"github.com/kubeedge/kubeedge/keadm/cmd/keadm/app/cmd/util"
+	"github.com/spf13/cobra"
+	metaV1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"strings"
+	"time"
 )
 
 var (
@@ -37,12 +36,12 @@ func NewGettoken() *cobra.Command {
 		Long:    gettokenLongDescription,
 		Example: gettokenExample,
 		RunE: func(cmd *cobra.Command, args []string) error {
-			token, err := queryToken(constants.SystemNamespace, common.TokenSecretName, init.Kubeconfig)
+			token, cakey, err := queryTokenAndCaKey(constants.SystemNamespace, common.TokenSecretName, init.Kubeconfig)
 			if err != nil {
 				fmt.Printf("failed to get token, err is %s\n", err)
 				return err
 			}
-			token = wrapToken(token, init)
+			token = wrapToken(token, cakey, init)
 			return showToken(token)
 		},
 	}
@@ -57,32 +56,34 @@ func addGettokenFlags(cmd *cobra.Command, gettokenOptions *common.GettokenOption
 	cmd.Flags().StringVar(&gettokenOptions.Group, "group", "", "group info")
 }
 
-func wrapToken(token []byte, options *common.GettokenOptions) []byte {
+func wrapToken(token []byte, cakey []byte, options *common.GettokenOptions) []byte {
 	if options.User != "" || options.Group != "" {
-		return generateToken(options.User, options.Group)
-	} else{
+		cacash:=strings.SplitN(string(token),".", 2)[0]
+		cacash=fmt.Sprintf("%s.",cacash)
+		fmt.Println("haha")
+		return append([]byte(cacash),generateToken(cakey, options.User, options.Group)...)
+	} else {
 		return token
 	}
 }
-func generateToken(user string, group string)[]byte{
-	expiresAt := time.Now().Add(time.Hour * hubconfig.Config.CloudHub.TokenRefreshDuration * 2).Unix()
+func generateToken(cakey []byte, user string, group string) []byte {
+	expiresAt := time.Now().Add(time.Hour * 2).Unix()
 
 	token := jwt.New(jwt.SigningMethodHS256)
 
 	token.Claims = jwt.MapClaims{
-		"exp": expiresAt,
-		"user": user,
+		"exp":   expiresAt,
+		"user":  user,
 		"group": group,
 	}
 
-	keyPEM := hubconfig.Config.CaKey
-	tokenString, err := token.SignedString(keyPEM)
-	fmt.Printf("ca key: \nToken: %s\n", keyPEM,tokenString)
-	if err !=nil{
+	tokenString, err := token.SignedString(cakey)
+	if err != nil {
 		fmt.Printf("generate token err: %v\n", err)
 	}
 	return []byte(tokenString)
 }
+
 // newGettokenOptions return common options
 func newGettokenOptions() *common.GettokenOptions {
 	opts := &common.GettokenOptions{}
@@ -90,22 +91,26 @@ func newGettokenOptions() *common.GettokenOptions {
 	return opts
 }
 
-// queryToken gets token from k8s
-func queryToken(namespace string, name string, kubeConfigPath string) ([]byte, error) {
+// queryTokenAndCaKey gets token from k8s
+func queryTokenAndCaKey(namespace string, name string, kubeConfigPath string) ([]byte, []byte, error) {
 	client, err := util.KubeClient(kubeConfigPath)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	secret, err := client.CoreV1().Secrets(namespace).Get(context.Background(), name, metaV1.GetOptions{})
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
-	return secret.Data[common.TokenDataName], nil
+	casecret, err := client.CoreV1().Secrets(namespace).Get(context.Background(), "casecret", metaV1.GetOptions{})
+	if err != nil {
+		return nil, nil, err
+	}
+	return secret.Data[common.TokenDataName], casecret.Data["cakeydata"], nil
 }
 
 // showToken prints the token
 func showToken(data []byte) error {
-	_, err := fmt.Printf(string(data))
+	_, err := fmt.Printf("%s\n",string(data))
 	if err != nil {
 		return err
 	}
