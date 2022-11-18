@@ -127,7 +127,9 @@ func (m *metaManager) processInsert(message model.Message) {
 		node, ok := message.GetContent().(*corev1.Node)
 		if ok {
 			if edgehubconfig.Config.User != "" {
-				node.ObjectMeta.Labels=make(map[string]string)
+				if node.ObjectMeta.Labels == nil {
+					node.ObjectMeta.Labels = make(map[string]string)
+				}
 				node.ObjectMeta.Labels[MEC_USER_GROUP]=edgehubconfig.Config.Group
 				node.Spec.Taints = []corev1.Taint{
 					{

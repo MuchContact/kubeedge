@@ -93,11 +93,6 @@ func NewEdgeJoin() *cobra.Command {
 			return nil
 		},
 		RunE: func(cmd *cobra.Command, args []string) error {
-			ver, err := util.GetCurrentVersion(joinOptions.KubeEdgeVersion)
-			if err != nil {
-				return fmt.Errorf("edge node join failed: %v", err)
-			}
-			joinOptions.KubeEdgeVersion = ver
 
 			if err := join(joinOptions, step); err != nil {
 				return fmt.Errorf("edge node join failed: %v", err)
@@ -212,19 +207,21 @@ func createDirs() error {
 	}
 	return nil
 }
-func parseUser(token string) string {
+func parseUserAndGroup(token string) (string,string) {
 	base64data := strings.Split(token, ".")[2]
-	decodeBytes, err := base64.StdEncoding.DecodeString(base64data)
+	decodeBytes, err := base64.RawStdEncoding.DecodeString(base64data)
+	klog.Infof("parseUserAndGroup => %s\n token => %s\n", string(decodeBytes), token)
 	if err != nil {
-		return ""
+		return "",""
 	}
 	var mm map[string]interface{}
 	json.Unmarshal(decodeBytes, &mm)
 	v, ok := mm["user"]
+	g, ok := mm["group"]
 	if ok {
-		return v.(string)
+		return v.(string), g.(string)
 	}
-	return ""
+	return "",""
 }
 func createEdgeConfigFiles(opt *common.JoinOptions) error {
 	var edgeCoreConfig *v1alpha2.EdgeCoreConfig
@@ -249,9 +246,10 @@ func createEdgeConfigFiles(opt *common.JoinOptions) error {
 	edgeCoreConfig.Modules.EdgeHub.WebSocket.Server = opt.CloudCoreIPPort
 	if opt.Token != "" {
 		edgeCoreConfig.Modules.EdgeHub.Token = opt.Token
-		user := parseUser(opt.Token)
+		user,group := parseUserAndGroup(opt.Token)
 		if user != "" {
 			edgeCoreConfig.Modules.EdgeHub.User = user
+			edgeCoreConfig.Modules.EdgeHub.Group = group
 		}
 	}
 	if opt.EdgeNodeName != "" {
