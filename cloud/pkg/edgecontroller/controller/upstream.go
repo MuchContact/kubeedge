@@ -872,19 +872,13 @@ func (uc *UpstreamController) patchNode() {
 				continue
 			}
 
-			dataReq, ok := msg.Content.(string)
-			if !ok {
+			patchBytes, err := msg.GetContentData()
+			if err != nil {
 				klog.Warningf("message: %s process failure, get data failed with error: %v", msg.GetID(), err)
 				continue
 			}
 
-			nodeByte, err := base64.URLEncoding.DecodeString(dataReq)
-			if err != nil {
-				klog.Warningf("message: %s process failure, decode content data failed with error: %v", msg.GetID(), err)
-				continue
-			}
-
-			node, err := uc.kubeClient.CoreV1().Nodes().Patch(context.TODO(), name, apimachineryType.StrategicMergePatchType, nodeByte, metaV1.PatchOptions{}, "status")
+			node, err := uc.kubeClient.CoreV1().Nodes().Patch(context.TODO(), name, apimachineryType.StrategicMergePatchType, patchBytes, metaV1.PatchOptions{}, "status")
 			if err != nil {
 				klog.Errorf("message: %s process failure, patch node failed with error: %v, namespace: %s, name: %s", msg.GetID(), err, namespace, name)
 			}

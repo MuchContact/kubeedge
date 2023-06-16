@@ -55,13 +55,12 @@ func addGettokenFlags(cmd *cobra.Command, gettokenOptions *common.GettokenOption
 	cmd.Flags().StringVar(&gettokenOptions.User, "user", "", "user info")
 	cmd.Flags().StringVar(&gettokenOptions.Group, "group", "", "group info")
 }
-
+//默认token consisting of caHash and jwt Token，这里将jwt token的内容进行重写，保留原来的caHash
 func wrapToken(token []byte, cakey []byte, options *common.GettokenOptions) []byte {
 	if options.User != "" || options.Group != "" {
-		cacash:=strings.SplitN(string(token),".", 2)[0]
-		cacash=fmt.Sprintf("%s.",cacash)
-		fmt.Println("haha")
-		return append([]byte(cacash),generateToken(cakey, options.User, options.Group)...)
+		caHash :=strings.SplitN(string(token),".", 2)[0]
+		caHash =fmt.Sprintf("%s.", caHash)
+		return append([]byte(caHash),generateToken(cakey, options.User, options.Group)...)
 	} else {
 		return token
 	}
